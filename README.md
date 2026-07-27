@@ -16,20 +16,10 @@ A multi-feature extension package for [Pi Coding Agent](https://github.com/earen
 
 ## Installation
 
-Add the extension to your global settings (`~/.pi/agent/settings.json`):
-
-```json
-{
-  "extensions": [
-    "C:/Projects/pi-norain-extension/extensions/header/index.ts"
-  ]
-}
-```
-
-Or install it as a Pi package:
+Install directly as a Pi package from GitHub:
 
 ```bash
-pi package add C:/Projects/pi-norain-extension
+pi install git:github.com/StarWishsama/pi-norain-extension
 ```
 
 ## License
