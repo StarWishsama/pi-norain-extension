@@ -1,0 +1,31 @@
+{
+  "name": "pi-norain-extension",
+  "version": "1.0.0",
+  "description": "Pi coding agent extension with custom startup banner and utility commands.",
+  "type": "module",
+  "license": "MIT",
+  "keywords": [
+    "pi-package",
+    "pi-extension",
+    "banner",
+    "header",
+    "exit-command"
+  ],
+  "files": [
+    "extensions",
+    "scripts",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "convert": "python scripts/convert.py"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*"
+  },
+  "pi": {
+    "extensions": [
+      "./extensions/header/index.ts"
+    ]
+  }
+}
