@@ -1,25 +1,41 @@
 # pi-norain-extension
 
-A multi-feature extension package for [Pi Coding Agent](https://github.com/earendil-works/pi-coding-agent).
+An extension collection for [Pi Coding Agent](https://github.com/earendil-works/pi-coding-agent).
 
 ## Features
 
-- 🎨 **Side-by-Side Startup Banner**: Renders customized ASCII Braille pixel art alongside a real-time Pi environment telemetry panel (Agent, Model, Thinking level, Mode, Session ID, CWD, System, Tools count, and Status).
-- 🚪 **`/exit` Command**: Adds the `/exit` slash command to gracefully exit the interactive session (equivalent to `/quit`).
-- 🌈 **Vibrant RGB Gradients**: 24-bit ANSI color gradients (Cyber Neon Pink → Sky Blue) across banner rows and title elements.
-- 📐 **Terminal Responsive**: Automatically switches between side-by-side mode in wide viewports and a stacked layout in narrow viewports.
-- 🛠️ **Image Converter Included**: Contains a Python conversion script (`scripts/convert.py`) to convert images into ASCII Braille pixel art.
+- 🎨 **Startup banner and `/exit`**: displays a colorful startup banner with live environment details, and adds `/exit` for graceful session shutdown.
+- 🔎 **Model identifier**: compares the requested model with the model reported by the response. It displays a concise warning above the editor when they differ.
 
-## Commands
+## Model identifier
 
-- `/exit` — Gracefully exits the current Pi session (calls `ctx.shutdown()`).
+The model identifier automatically observes provider requests and responses. It offers these commands:
+
+- `/mi`: show the current match status.
+- `/mi reload`: reload its configuration.
+- `/mi config`: show the configuration path and create it when absent.
+- `/mi clear`: clear the active warning banner.
+
+On first use, it creates `.pi/model-identifier.json` in the project with defaults such as:
+
+```json
+{
+  "enableWidgetNotice": true,
+  "enableToastNotice": true,
+  "enableStatusBar": false
+}
+```
 
 ## Installation
 
-Install directly as a Pi package from GitHub:
-
 ```bash
 pi install git:github.com/StarWishsama/pi-norain-extension
+```
+
+## Tests
+
+```powershell
+bun test
 ```
 
 ## License

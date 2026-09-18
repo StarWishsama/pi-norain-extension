@@ -9,7 +9,8 @@
     "pi-extension",
     "banner",
     "header",
-    "exit-command"
+    "exit-command",
+    "model-identifier"
   ],
   "files": [
     "extensions",
@@ -18,14 +19,16 @@
     "LICENSE"
   ],
   "scripts": {
-    "convert": "python scripts/convert.py"
+    "convert": "python scripts/convert.py",
+    "test": "bun test test/**/*.test.ts"
   },
   "peerDependencies": {
     "@earendil-works/pi-coding-agent": "*"
   },
   "pi": {
     "extensions": [
-      "./extensions/header/index.ts"
+      "./extensions/header/index.ts",
+      "./extensions/model-identifier/index.ts"
     ]
   }
 }
