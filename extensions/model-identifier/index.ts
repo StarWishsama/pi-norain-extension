@@ -1,9 +1,9 @@
 import type { AssistantMessage, ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { DEFAULT_CONFIG, formatTemplate, getConfigPath, loadConfig, type ModelIdentifierConfig } from "./config.ts";
-import { compareModels, type ModelMismatchNoticeData } from "./utils.ts";
+import { compareModels, observedResponseModel, type ModelMismatchNoticeData } from "./utils.ts";
 
 export { DEFAULT_CONFIG, formatTemplate, getConfigPath, loadConfig, type ModelIdentifierConfig } from "./config.ts";
-export { MODEL_NOTICE_ENTRY_TYPE, compareModels, normalizeModelName, type ModelMismatchNoticeData } from "./utils.ts";
+export { MODEL_NOTICE_ENTRY_TYPE, compareModels, normalizeModelName, observedResponseModel, type ModelMismatchNoticeData } from "./utils.ts";
 
 const WIDGET_ID = "model-identifier-warning";
 const STATUS_ID = "model-identifier";
@@ -11,6 +11,7 @@ const STATUS_ID = "model-identifier";
 export default function modelIdentifierExtension(pi: ExtensionAPI): void {
 	let config: ModelIdentifierConfig = DEFAULT_CONFIG;
 	let requestedModel: string | undefined;
+	let sentModel: string | undefined;
 	let responseHeaderModel: string | undefined;
 	let turnMismatches: ModelMismatchNoticeData[] = [];
 	let lastNotice: ModelMismatchNoticeData | undefined;
@@ -20,7 +21,8 @@ export default function modelIdentifierExtension(pi: ExtensionAPI): void {
 		return {
 			selectedModel: notice?.selectedModel || selectedModel,
 			requestedModel: notice?.requestedModel || requestedModel || selectedModel,
-			actualModel: notice?.actualModel || requestedModel || selectedModel,
+			sentModel: notice?.sentModel || sentModel || selectedModel,
+			actualModel: notice?.actualModel || sentModel || selectedModel,
 			provider: notice?.selectedProvider || ctx.model?.provider || "",
 		};
 	}
@@ -42,6 +44,7 @@ export default function modelIdentifierExtension(pi: ExtensionAPI): void {
 	pi.on("session_start", (_event, ctx) => {
 		config = loadConfig();
 		requestedModel = ctx.model?.id;
+		sentModel = undefined;
 		responseHeaderModel = undefined;
 		turnMismatches = [];
 		lastNotice = undefined;
@@ -50,10 +53,12 @@ export default function modelIdentifierExtension(pi: ExtensionAPI): void {
 
 	pi.on("model_select", (event, ctx) => {
 		requestedModel = event.model.id;
+		sentModel = undefined;
 		updateStatus(ctx);
 	});
 
 	pi.on("before_agent_start", (_event, ctx) => {
+		sentModel = undefined;
 		responseHeaderModel = undefined;
 		turnMismatches = [];
 		if (ctx.hasUI) ctx.ui.setWidget(WIDGET_ID, undefined);
@@ -61,6 +66,7 @@ export default function modelIdentifierExtension(pi: ExtensionAPI): void {
 	});
 
 	pi.on("turn_start", (_event, ctx) => {
+		sentModel = undefined;
 		responseHeaderModel = undefined;
 		requestedModel = ctx.model?.id;
 		updateStatus(ctx, formatTemplate(config.templates.statusBusy, templateVars(ctx)));
@@ -68,13 +74,15 @@ export default function modelIdentifierExtension(pi: ExtensionAPI): void {
 
 	pi.on("before_provider_request", (event, ctx) => {
 		const payload = event.payload as Record<string, unknown> | undefined;
-		requestedModel = typeof payload?.model === "string" && payload.model ? payload.model : ctx.model?.id;
+		requestedModel = ctx.model?.id;
+		sentModel = typeof payload?.model === "string" && payload.model.trim() ? payload.model : requestedModel;
+		responseHeaderModel = undefined;
 		updateStatus(ctx, formatTemplate(config.templates.statusBusy, templateVars(ctx)));
 	});
 
 	pi.on("after_provider_response", (event) => {
 		const headers = event.headers || {};
-		responseHeaderModel = headers["x-model-name"] || headers["openai-model"] || headers["x-openrouter-model"] || headers["x-model"] || headers["x-upstream-model"] || headers["cf-aig-model"] || headers["x-served-model"] || headers["x-actual-model"] || headers["x-deepseek-model"] || headers["x-zai-model"] || headers["x-zhipu-model"] || headers["x-grok-model"] || headers["x-anthropic-model"] || headers.model || headers["x-served-by-model"];
+		responseHeaderModel = headers["x-upstream-response-model"] || headers["x-response-model"] || headers["x-model-name"] || headers["openai-model"] || headers["x-openrouter-model"] || headers["x-model"] || headers["x-upstream-model"] || headers["cf-aig-model"] || headers["x-served-model"] || headers["x-actual-model"] || headers["x-deepseek-model"] || headers["x-zai-model"] || headers["x-zhipu-model"] || headers["x-grok-model"] || headers["x-anthropic-model"] || headers.model || headers["x-served-by-model"];
 	});
 
 	pi.on("turn_end", (event, ctx) => {
@@ -82,15 +90,15 @@ export default function modelIdentifierExtension(pi: ExtensionAPI): void {
 		const message = event.message as AssistantMessage;
 		const selectedModel = ctx.model?.id || requestedModel || "unknown";
 		const requested = requestedModel || selectedModel;
-		const actualModel = message.responseModel || responseHeaderModel || message.model || requested;
-		const modelMismatch = !compareModels(requested, actualModel).isMatch;
-		if (!modelMismatch) return;
+		const sent = sentModel || selectedModel;
+		const actualModel = observedResponseModel(message.responseModel, responseHeaderModel);
+		if (!actualModel || compareModels(sent, actualModel).isMatch) return;
 
-		const vars = { selectedModel, requestedModel: requested, actualModel, provider: ctx.model?.provider };
+		const vars = { selectedModel, requestedModel: requested, sentModel: sent, actualModel, provider: ctx.model?.provider };
 		const reasons = [formatTemplate(config.templates.reasonModelMismatch, vars)];
 		lastNotice = {
 			timestamp: Date.now(), turnIndex: event.turnIndex, selectedModel, selectedProvider: ctx.model?.provider,
-			requestedModel: requested, responseModel: message.responseModel, headerModel: responseHeaderModel,
+			requestedModel: requested, sentModel: sent, responseModel: message.responseModel, headerModel: responseHeaderModel,
 			actualModel, reasons,
 		};
 		turnMismatches.push(lastNotice);
@@ -130,8 +138,8 @@ export default function modelIdentifierExtension(pi: ExtensionAPI): void {
 			return;
 		}
 		const text = lastNotice
-			? `【模型检测状态 - 发现异常】\n• 请求模型: ${lastNotice.requestedModel}\n• 实际响应: ${lastNotice.actualModel}\n• 差异原因: ${lastNotice.reasons.join("; ")}`
-			: `【模型检测状态 - 正常】\n• 请求模型: ${requestedModel || ctx.model?.id || "未选择"}`;
+			? `【模型检测状态 - 发现异常】\n• 请求模型: ${lastNotice.requestedModel}\n• 发往上游: ${lastNotice.sentModel}\n• 上游响应: ${lastNotice.actualModel}\n• 差异原因: ${lastNotice.reasons.join("; ")}`
+			: `【模型检测状态 - 正常】\n• 请求模型: ${requestedModel || ctx.model?.id || "未选择"}\n• 发往上游: ${sentModel || "未观测"}`;
 		if (ctx.hasUI) ctx.ui.notify(text, lastNotice ? "warning" : "info");
 	};
 

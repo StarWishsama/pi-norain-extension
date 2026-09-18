@@ -19,12 +19,12 @@ export interface ModelIdentifierConfig {
 }
 
 export const DEFAULT_TEMPLATES: ModelIdentifierTemplates = {
-	widgetWarning: "⚠ 检测到模型替换 [{selectedModel}] -> [{actualModel}]",
-	toastModelWarning: "⚠ 检测到模型替换 [{selectedModel}] -> [{actualModel}]",
+	widgetWarning: "⚠ 上游响应模型不一致 [{sentModel}] -> [{actualModel}]",
+	toastModelWarning: "⚠ 上游响应模型不一致 [{sentModel}] -> [{actualModel}]",
 	statusNormal: "🎯 请求模型: {requestedModel} {provider}",
-	statusBusy: "🚀 正在请求: {requestedModel}",
-	statusWarning: "⚠️ 响应模型: {actualModel} (请求: {requestedModel})",
-	reasonModelMismatch: "响应模型与请求模型不一致：请求 [{requestedModel}]，实际响应 [{actualModel}]",
+	statusBusy: "🚀 正在请求: {sentModel}",
+	statusWarning: "⚠️ 上游响应: {actualModel} (发往上游: {sentModel})",
+	reasonModelMismatch: "上游响应模型不一致：发往上游 [{sentModel}]，上游响应 [{actualModel}]",
 };
 
 export const DEFAULT_CONFIG: ModelIdentifierConfig = {

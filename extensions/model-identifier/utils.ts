@@ -6,10 +6,16 @@ export interface ModelMismatchNoticeData {
 	selectedModel: string;
 	selectedProvider?: string;
 	requestedModel: string;
+	sentModel: string;
 	responseModel?: string;
 	headerModel?: string;
 	actualModel: string;
 	reasons: string[];
+}
+
+export function observedResponseModel(responseModel?: string, headerModel?: string): string | undefined {
+	const model = responseModel?.trim() || headerModel?.trim();
+	return model || undefined;
 }
 
 export function normalizeModelName(raw?: string): string {
@@ -21,19 +27,19 @@ export function normalizeModelName(raw?: string): string {
 }
 
 export function compareModels(
-	requestedModel: string,
-	actualModel: string,
+	sentModel: string,
+	responseModel: string,
 ): { isMatch: boolean; details: string } {
-	const requested = normalizeModelName(requestedModel);
-	const actual = normalizeModelName(actualModel);
-	if (!requested || !actual) {
+	const sent = normalizeModelName(sentModel);
+	const response = normalizeModelName(responseModel);
+	if (!sent || !response) {
 		return { isMatch: true, details: "模型名称为空或无法识别" };
 	}
-	if (requested === actual) {
-		return { isMatch: true, details: "请求模型与响应模型一致" };
+	if (sent === response) {
+		return { isMatch: true, details: "发往上游的模型与上游响应模型一致" };
 	}
 	return {
 		isMatch: false,
-		details: `响应模型与请求模型不一致：请求 [${requestedModel}]，实际响应 [${actualModel}]`,
+		details: `上游响应模型不一致：发往上游 [${sentModel}]，上游响应 [${responseModel}]`,
 	};
 }
