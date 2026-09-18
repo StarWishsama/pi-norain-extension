@@ -1,8 +1,8 @@
 import type { AssistantMessage, ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
-import { DEFAULT_CONFIG, ensureConfigFile, formatTemplate, loadConfig, type ModelIdentifierConfig } from "./config.ts";
+import { DEFAULT_CONFIG, formatTemplate, getConfigPath, loadConfig, type ModelIdentifierConfig } from "./config.ts";
 import { compareModels, type ModelMismatchNoticeData } from "./utils.ts";
 
-export { DEFAULT_CONFIG, formatTemplate, loadConfig, type ModelIdentifierConfig } from "./config.ts";
+export { DEFAULT_CONFIG, formatTemplate, getConfigPath, loadConfig, type ModelIdentifierConfig } from "./config.ts";
 export { MODEL_NOTICE_ENTRY_TYPE, compareModels, normalizeModelName, type ModelMismatchNoticeData } from "./utils.ts";
 
 const WIDGET_ID = "model-identifier-warning";
@@ -40,8 +40,7 @@ export default function modelIdentifierExtension(pi: ExtensionAPI): void {
 	}
 
 	pi.on("session_start", (_event, ctx) => {
-		config = loadConfig(ctx.cwd);
-		ensureConfigFile(ctx.cwd);
+		config = loadConfig();
 		requestedModel = ctx.model?.id;
 		responseHeaderModel = undefined;
 		turnMismatches = [];
@@ -115,13 +114,13 @@ export default function modelIdentifierExtension(pi: ExtensionAPI): void {
 	const handleCommand = async (args: string, ctx: ExtensionContext) => {
 		const command = args.trim().toLowerCase();
 		if (command === "reload") {
-			config = loadConfig(ctx.cwd);
+			config = loadConfig();
 			updateStatus(ctx);
 			if (ctx.hasUI) ctx.ui.notify("已重新加载 model-identifier 配置文件", "info");
 			return;
 		}
 		if (command === "config") {
-			if (ctx.hasUI) ctx.ui.notify(`配置文件: ${ensureConfigFile(ctx.cwd)}`, "info");
+			if (ctx.hasUI) ctx.ui.notify(`全局配置文件: ${getConfigPath()}`, "info");
 			return;
 		}
 		if (command === "clear") {

@@ -13,16 +13,20 @@ The model identifier automatically observes provider requests and responses. It 
 
 - `/mi`: show the current match status.
 - `/mi reload`: reload its configuration.
-- `/mi config`: show the configuration path and create it when absent.
+- `/mi config`: show the global configuration path.
 - `/mi clear`: clear the active warning banner.
 
-On first use, it creates `.pi/model-identifier.json` in the project with defaults such as:
+It reads optional global configuration from `~/.pi/agent/model-identifier.json`; it never creates or modifies this file. For example:
 
 ```json
 {
   "enableWidgetNotice": true,
   "enableToastNotice": true,
-  "enableStatusBar": false
+  "enableStatusBar": false,
+  "templates": {
+    "widgetWarning": "⚠ Detected model substitution [{selectedModel}] -> [{actualModel}]",
+    "toastModelWarning": "⚠ Detected model substitution [{selectedModel}] -> [{actualModel}]"
+  }
 }
 ```
 

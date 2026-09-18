@@ -1,19 +1,6 @@
-/**
- * 模型识别配置管理与模板渲染。
- */
-
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-
-let configDir = ".pi";
-try {
-	const pi = require("@earendil-works/pi-coding-agent") as { CONFIG_DIR_NAME?: string };
-	configDir = pi.CONFIG_DIR_NAME || configDir;
-} catch {
-	// 单元测试和独立运行时没有安装 Pi peer dependency，使用默认目录。
-}
-
-const CONFIG_DIR = configDir;
+import { getAgentDir } from "@earendil-works/pi-coding-agent";
 
 export interface ModelIdentifierTemplates {
 	widgetWarning: string;
@@ -32,8 +19,8 @@ export interface ModelIdentifierConfig {
 }
 
 export const DEFAULT_TEMPLATES: ModelIdentifierTemplates = {
-	widgetWarning: "⚠ 响应模型不一致 [{requestedModel}] -> [{actualModel}]",
-	toastModelWarning: "⚠ 响应模型不一致 [{requestedModel}] -> [{actualModel}]",
+	widgetWarning: "⚠ 检测到模型替换 [{selectedModel}] -> [{actualModel}]",
+	toastModelWarning: "⚠ 检测到模型替换 [{selectedModel}] -> [{actualModel}]",
 	statusNormal: "🎯 请求模型: {requestedModel} {provider}",
 	statusBusy: "🚀 正在请求: {requestedModel}",
 	statusWarning: "⚠️ 响应模型: {actualModel} (请求: {requestedModel})",
@@ -57,10 +44,13 @@ export function formatTemplate(
 	});
 }
 
-export function loadConfig(cwd: string): ModelIdentifierConfig {
-	const configPath = join(cwd, CONFIG_DIR, "model-identifier.json");
+export function getConfigPath(): string {
+	return join(getAgentDir(), "model-identifier.json");
+}
 
+export function loadConfig(): ModelIdentifierConfig {
 	try {
+		const configPath = getConfigPath();
 		if (existsSync(configPath)) {
 			const parsed = JSON.parse(readFileSync(configPath, "utf8")) as Partial<ModelIdentifierConfig>;
 			return {
@@ -73,20 +63,7 @@ export function loadConfig(cwd: string): ModelIdentifierConfig {
 			};
 		}
 	} catch (error) {
-		console.warn("[model-identifier] 读取配置文件失败，使用默认配置:", error);
+		console.warn("[model-identifier] 读取全局配置文件失败，使用默认配置:", error);
 	}
-
 	return { ...DEFAULT_CONFIG };
-}
-
-export function ensureConfigFile(cwd: string): string {
-	const configPath = join(cwd, CONFIG_DIR, "model-identifier.json");
-	if (!existsSync(configPath)) {
-		try {
-			writeFileSync(configPath, JSON.stringify(DEFAULT_CONFIG, null, 2), "utf8");
-		} catch (error) {
-			console.warn("[model-identifier] 创建默认配置文件失败:", error);
-		}
-	}
-	return configPath;
 }
